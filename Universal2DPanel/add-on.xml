@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<SimBase.Document Type="AddOnXml" version="4,0" id="add-on">
+  <AddOn.Name>Universal2DPanel</AddOn.Name>
+  <AddOn.Description>Example of window application that interact with P3D using SimConnect. Access it using Add-ons menu.</AddOn.Description>
+  <AddOn.Component>
+    <Category>EXE</Category>
+    <Path>Universal2DPanel.exe</Path>
+    <CommandLine>internal</CommandLine>
+  </AddOn.Component>
+</SimBase.Document>
