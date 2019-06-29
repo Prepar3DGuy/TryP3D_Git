@@ -23,6 +23,7 @@ enum EVENT_ID
 void CALLBACK MyDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContext)
 {
 	HRESULT hr;
+	WCHAR msg[100];
 
 	switch (pData->dwID)
 	{
@@ -34,13 +35,14 @@ void CALLBACK MyDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContex
 			{
 				case EVENT_MENU_PANEL:
 				{
-					printf("\nMenu selected\n");
+					OutputDebugStringW(L"Menu selected\n");
 					break;
 				}
 
 				default:
 				{
-					printf("\nReceived unknown event: %d", evt->uEventID);
+					swprintf_s(msg, L"Received unknown event: %d\n", evt->uEventID);
+					OutputDebugStringW(msg);
 					break;
 				}
 			}
@@ -56,7 +58,8 @@ void CALLBACK MyDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContex
 
 		default:
 		{
-			printf("\nReceived ID: %d", pData->dwID);
+			swprintf_s(msg, L"Received ID: %d\n", pData->dwID);
+			OutputDebugStringW(msg);
 			break;
 		}
 	}
@@ -68,7 +71,7 @@ void Universal2DPanel()
 
 	if (SUCCEEDED(SimConnect_Open(&hSimConnect, "Universal2DPanel", NULL, 0, 0, 0)))
 	{
-		printf("\nConnected to Prepar3D!");
+		OutputDebugStringW(L"Connected to Prepar3D!\n");
 
 		// Create private events
 		hr = SimConnect_MapClientEventToSimEvent(hSimConnect, EVENT_MENU_PANEL);
@@ -93,17 +96,31 @@ void Universal2DPanel()
 
 		hr = SimConnect_Close(hSimConnect);
 
-		printf("\nDisconnected from Prepar3D");
+		OutputDebugStringW(L"Disconnected from Prepar3D\n");
 	}
 	else
-		printf("\nFailed to connect to Prepar3D");
+	{
+		MessageBoxW(NULL, L"Failed to connect to Prepar3D.\nPrepar3D is not running or SimConnect interface is unavailable.\nApplication will be closed.", L"Universal2DPanel", MB_ICONERROR | MB_OK | MB_APPLMODAL);
+		OutputDebugStringW(L"Failed to connect to Prepar3D\n");
+	}
 }
 
-int main(int argc, _TCHAR* argv[])
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
 	// Check for argument that indicate start from P3D
-	if (argc > 1 && lstrcmp(argv[1], L"internal") == 0) 
-		internal = true;
+	int argc;
+	LPWSTR *argv;
+	argv = CommandLineToArgvW(pCmdLine, &argc);
+	if (argv != NULL && argc > 0)
+	{
+		if (lstrcmpW(argv[0], L"internal") == 0)
+		{
+			internal = true;
+			MessageBoxW(NULL, L"Applicatoin was started by Prepar3D.\nIn case of debugging you can attach Visual Studio debugger to the process Universal2DPanel.exe using Debug->Attach to process", L"Universal2DPanel", MB_ICONINFORMATION | MB_OK | MB_APPLMODAL);
+		}
+	}
+	LocalFree(argv);
+
 		
 	Universal2DPanel();
 
