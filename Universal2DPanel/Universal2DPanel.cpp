@@ -4,9 +4,13 @@
 #include "SimConnect.h"
 #include <strsafe.h>
 
+#include "MainWindow.h"
+
 bool quit = false;
 bool internal = false;
 HANDLE hSimConnect = NULL;
+
+MainWindow win; // Window
 
 // SimConnect Events Groups
 enum GROUP_ID
@@ -36,6 +40,8 @@ void CALLBACK MyDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContex
 				case EVENT_MENU_PANEL:
 				{
 					OutputDebugStringW(L"Menu selected\n");
+					internal = !internal;
+					ShowWindow(win.Window(), internal ? SW_HIDE : SW_SHOW);
 					break;
 				}
 
@@ -75,7 +81,7 @@ void Universal2DPanel()
 
 		// Create private events
 		hr = SimConnect_MapClientEventToSimEvent(hSimConnect, EVENT_MENU_PANEL);
-		
+
 		// Add menu item
 		hr = SimConnect_MenuAddItem(hSimConnect, "Universal 2DPanel", EVENT_MENU_PANEL, NULL);
 
@@ -84,9 +90,44 @@ void Universal2DPanel()
 
 		hr = SimConnect_SetNotificationGroupPriority(hSimConnect, GROUP_MENU, SIMCONNECT_GROUP_PRIORITY_DEFAULT);
 
-		// 
+
+		DWORD WindowStyle;
+		DWORD ExWindowStyle;
+
+		if (internal)
+		{
+			WindowStyle = WS_SIZEBOX; // WS_EX_LEFT
+			ExWindowStyle = WS_EX_TOOLWINDOW | WS_EX_TOPMOST; //WS_EX_TOOLWINDOW
+		}
+		else
+		{
+			WindowStyle = WS_OVERLAPPEDWINDOW;
+			ExWindowStyle = WS_EX_LEFT;
+		}
+
+		if (!win.Create(L"Test Panel", WindowStyle, ExWindowStyle, CW_USEDEFAULT, CW_USEDEFAULT, 200, 100))
+		{
+			MessageBoxW(NULL, L"Failed to create window.", L"Universal2DPanel", MB_ICONERROR | MB_OK | MB_APPLMODAL);
+			OutputDebugStringW(L"Failed to create window\n");
+			quit = true;
+		}
+
+		ShowWindow(win.Window(), internal ? SW_HIDE : SW_SHOW);
+
+		//Run the message loop.
+		MSG msg = {};
 		while (!quit)
 		{
+			if(GetMessage(&msg, NULL, 0, 0))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+			else if (msg.message == WM_QUIT)
+			{
+				quit = true;
+			}
+
 			SimConnect_CallDispatch(hSimConnect, MyDispatchProc, NULL);
 			Sleep(1);
 		}
@@ -116,7 +157,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		if (lstrcmpW(argv[0], L"internal") == 0)
 		{
 			internal = true;
-			MessageBoxW(NULL, L"Applicatoin was started by Prepar3D.\nIn case of debugging you can attach Visual Studio debugger to the process Universal2DPanel.exe using Debug->Attach to process", L"Universal2DPanel", MB_ICONINFORMATION | MB_OK | MB_APPLMODAL);
+			//MessageBoxW(NULL, L"Applicatoin was started by Prepar3D.\nIn case of debugging you can attach Visual Studio debugger to the process Universal2DPanel.exe using Debug->Attach to process", L"Universal2DPanel", MB_ICONINFORMATION | MB_OK | MB_APPLMODAL);
 		}
 	}
 	LocalFree(argv);

@@ -181,7 +181,8 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="WindowPanel.cpp" />
+    <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="Universal2DPanel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="add-on.xml">
@@ -193,6 +194,9 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </DeploymentContent>
     </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MainWindow.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
