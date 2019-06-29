@@ -8,6 +8,68 @@ bool quit = false;
 bool internal = false;
 HANDLE hSimConnect = NULL;
 
+HWND hwnd = NULL;
+WNDCLASS wc = {};
+MSG msg = {};
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	switch (uMsg)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hwnd, &ps);
+		
+		// Draw window here
+		FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+
+		EndPaint(hwnd, &ps);
+	}
+	return 0;
+
+	}
+	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+void MakeWindow()
+{
+	// Register the window class.
+	const wchar_t CLASS_NAME[] = L"Sample Window Class";
+	
+	wc.lpfnWndProc = WindowProc;
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.lpszClassName = CLASS_NAME;
+
+	RegisterClass(&wc);
+
+	// Create the window.
+	hwnd = CreateWindowEx(
+		0,                              // Optional window styles.
+		CLASS_NAME,                     // Window class
+		L"Hello World Window",    // Window text
+		WS_OVERLAPPEDWINDOW,            // Window style
+
+										// Size and position
+		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+
+		NULL,       // Parent window    
+		NULL,       // Menu
+		GetModuleHandle(NULL),  // Instance handle
+		NULL        // Additional application data
+	);
+
+	if (hwnd == NULL)
+	{
+		exit(0);
+	}
+
+}
+
 // SimConnect Events Groups
 enum GROUP_ID
 {
@@ -36,6 +98,8 @@ void CALLBACK MyDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContex
 				case EVENT_MENU_PANEL:
 				{
 					OutputDebugStringW(L"Menu selected\n");
+					internal = !internal;
+					ShowWindow(hwnd, internal ? SW_HIDE : SW_SHOW);
 					break;
 				}
 
@@ -84,9 +148,20 @@ void Universal2DPanel()
 
 		hr = SimConnect_SetNotificationGroupPriority(hSimConnect, GROUP_MENU, SIMCONNECT_GROUP_PRIORITY_DEFAULT);
 
-		// 
+		MakeWindow();
+
+		ShowWindow(hwnd, internal ? SW_HIDE : SW_SHOW);
+
+		// Run the message loop.
 		while (!quit)
 		{
+			if (PeekMessage(&msg, NULL, 0, 0, 0))
+			{
+				//if (msg.message = WM_QUIT) quit = true;
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+
 			SimConnect_CallDispatch(hSimConnect, MyDispatchProc, NULL);
 			Sleep(1);
 		}
