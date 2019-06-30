@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "SimConnect.h"
 #include <strsafe.h>
+#include <windowsx.h>
 
 bool quit = false;
 bool internal = false;
@@ -12,6 +13,8 @@ HWND hwnd = NULL;
 WNDCLASS wc = {};
 MSG msg = {};
 UINT_PTR IDTimer;
+HWND hButton = NULL;
+HWND hEdit = NULL;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -26,6 +29,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_DESTROY:
 		KillTimer(hwnd, IDTimer);
+		DestroyWindow(hEdit);
+		DestroyWindow(hButton);
 		PostQuitMessage(0);
 		return 0;
 
@@ -35,7 +40,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		HDC hdc = BeginPaint(hwnd, &ps);
 		
 		// Draw window here
-		FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+		FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 0));
 
 		EndPaint(hwnd, &ps);
 	}
@@ -44,13 +49,28 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_TIMER:
 		if (wParam == IDTimer)
 		{
-			InvalidateRect(hwnd, NULL, FALSE);
+			//InvalidateRect(hwnd, NULL, FALSE);
 		}
 		return 0;
 
 	case WM_SIZE:
 		InvalidateRect(hwnd, NULL, FALSE);
 		return 0;
+
+	case WM_COMMAND:
+	{
+		if (HIBYTE(wParam) == BN_CLICKED)
+		{
+			if ((HWND)lParam == hButton)
+			{
+				WCHAR text[100], msg[100];
+				GetWindowText(hEdit, text, 100);
+				swprintf_s(msg, L"Hello %s!", text);
+				MessageBoxW(NULL, msg, L"Universal2DPanel", MB_ICONWARNING | MB_OK | MB_APPLMODAL);
+				OutputDebugStringW(L"Button Clicked\n");
+			}
+		}
+	}
 
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -89,6 +109,33 @@ void MakeWindow()
 		exit(0);
 	}
 
+	// Create button
+	hButton = CreateWindow(
+		L"BUTTON",
+		L"Say Hello",
+		WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+		100,
+		10,
+		80,
+		20,
+		hwnd,
+		NULL,
+		GetModuleHandle(NULL),
+		NULL);
+
+	// Create text edit
+	hEdit = CreateWindow(
+		L"EDIT",
+		NULL,
+		WS_CHILD | WS_VISIBLE,
+		10,
+		10,
+		80,
+		20,
+		hwnd,
+		NULL,
+		GetModuleHandle(NULL),
+		NULL);
 }
 
 // SimConnect Events Groups
