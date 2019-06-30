@@ -197,7 +197,7 @@ void CALLBACK MyDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContex
 	}
 }
 
-void Universal2DPanel()
+DWORD WINAPI Universal2DPanel(LPVOID lpParam)
 {
 	HRESULT hr;
 
@@ -246,7 +246,12 @@ void Universal2DPanel()
 		MessageBoxW(NULL, L"Failed to connect to Prepar3D.\nPrepar3D is not running or SimConnect interface is unavailable.\nApplication will be closed.", L"Universal2DPanel", MB_ICONERROR | MB_OK | MB_APPLMODAL);
 		OutputDebugStringW(L"Failed to connect to Prepar3D\n");
 	}
+
+	return 0;
 }
+
+HANDLE hMyThread;
+DWORD dwThreadId;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
@@ -265,7 +270,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 	LocalFree(argv);
 
 		
-	Universal2DPanel();
+	hMyThread = CreateThread(
+		NULL,
+		0,
+		Universal2DPanel,
+		NULL,
+		0,
+		&dwThreadId
+	);
+
+	if (hMyThread == NULL)
+	{
+		return -1;
+	}
+
+	WaitForSingleObject(hMyThread, INFINITE);
 
 	return 0;
 }
