@@ -11,12 +11,21 @@ HANDLE hSimConnect = NULL;
 HWND hwnd = NULL;
 WNDCLASS wc = {};
 MSG msg = {};
+UINT_PTR IDTimer;
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
+	case WM_CREATE:
+		if (FAILED(SetTimer(hwnd, IDTimer, 10, NULL)))
+		{
+			return -1;
+		}
+		return 0;
+
 	case WM_DESTROY:
+		KillTimer(hwnd, IDTimer);
 		PostQuitMessage(0);
 		return 0;
 
@@ -31,6 +40,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		EndPaint(hwnd, &ps);
 	}
 	return 0;
+
+	case WM_TIMER:
+		if (wParam == IDTimer)
+		{
+			InvalidateRect(hwnd, NULL, FALSE);
+		}
+		return 0;
+
+	case WM_SIZE:
+		InvalidateRect(hwnd, NULL, FALSE);
+		return 0;
 
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -55,7 +75,8 @@ void MakeWindow()
 		WS_OVERLAPPEDWINDOW,            // Window style
 
 										// Size and position
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+		0, 0, 200, 100,
+		//CW_USEDEFAULT, CW_USEDEFAULT, 200, 100,
 
 		NULL,       // Parent window    
 		NULL,       // Menu
@@ -155,12 +176,12 @@ void Universal2DPanel()
 		// Run the message loop.
 		while (!quit)
 		{
-			if (PeekMessage(&msg, NULL, 0, 0, 0))
+			if (GetMessage(&msg, NULL, 0, 0))
 			{
-				//if (msg.message = WM_QUIT) quit = true;
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 			}
+			else if (msg.message = WM_QUIT) quit = true;
 
 			SimConnect_CallDispatch(hSimConnect, MyDispatchProc, NULL);
 			Sleep(1);
