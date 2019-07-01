@@ -5,6 +5,7 @@
 #include <strsafe.h>
 #include <windowsx.h>
 
+
 bool quit = false;
 bool internal = false;
 HANDLE hSimConnect = NULL;
@@ -12,7 +13,7 @@ HANDLE hSimConnect = NULL;
 HWND hwnd = NULL;
 WNDCLASS wc = {};
 MSG msg = {};
-UINT_PTR IDTimer;
+UINT_PTR IDTimer;	// Timer for periodically send event WM_TIMER to the window
 HWND hButton = NULL;
 HWND hEdit = NULL;
 
@@ -79,7 +80,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 void MakeWindow()
 {
 	// Register the window class.
-	const wchar_t CLASS_NAME[] = L"Sample Window Class";
+	const wchar_t CLASS_NAME[] = L"U2DPANEL";
 	
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = GetModuleHandle(NULL);
@@ -87,18 +88,20 @@ void MakeWindow()
 
 	RegisterClass(&wc);
 
+	// Get P3D main window handle (there is only one window with FS98MAIN window class inside the process)
+	HWND P3DMainWindow = FindWindow(L"FS98MAIN", NULL);
+
+	// (We can try to create window of FS98CHILD or FS98FLOAT window classes, but its message processing are by P3D logic.
+	// I doesn't know how to add gauges to it.)
+
 	// Create the window.
 	hwnd = CreateWindowEx(
-		0,                              // Optional window styles.
-		CLASS_NAME,                     // Window class
+		0, // Optional window styles.
+		CLASS_NAME,  // Window class
 		L"Hello World Window",    // Window text
-		WS_OVERLAPPEDWINDOW,            // Window style
-
-										// Size and position
-		0, 0, 200, 100,
-		//CW_USEDEFAULT, CW_USEDEFAULT, 200, 100,
-
-		NULL,       // Parent window    
+		WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_SYSMENU | WS_OVERLAPPED, // Window style
+		20, 20, 200, 100, // Position and size 
+		P3DMainWindow,   // Parent window  (This prevent the window to show icon on taskbar)
 		NULL,       // Menu
 		GetModuleHandle(NULL),  // Instance handle
 		NULL        // Additional application data
@@ -106,8 +109,13 @@ void MakeWindow()
 
 	if (hwnd == NULL)
 	{
-		exit(0);
+		OutputDebugStringW(L"Error to create\n");
+		return;
 	}
+
+	// Some changes to the default window styles
+	SetWindowLongPtr(hwnd, GWL_STYLE, GetWindowLongPtr(hwnd, GWL_STYLE) & ~WS_CAPTION); // hide window caption
+	SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) & ~WS_EX_WINDOWEDGE); // hide window edge
 
 	// Create button
 	hButton = CreateWindow(
@@ -167,7 +175,7 @@ void CALLBACK MyDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContex
 				{
 					OutputDebugStringW(L"Menu selected\n");
 					internal = !internal;
-					ShowWindow(hwnd, internal ? SW_HIDE : SW_SHOW);
+					ShowWindow(hwnd, internal ? SW_HIDE : SW_SHOW); //SW_SHOWNORMAL
 					break;
 				}
 
@@ -216,9 +224,11 @@ DWORD WINAPI Universal2DPanel(LPVOID lpParam)
 
 		hr = SimConnect_SetNotificationGroupPriority(hSimConnect, GROUP_MENU, SIMCONNECT_GROUP_PRIORITY_DEFAULT);
 
-		MakeWindow();
+		// Just once for DLL
+		SimConnect_CallDispatch(hSimConnect, MyDispatchProc, NULL);
 
-		ShowWindow(hwnd, internal ? SW_HIDE : SW_SHOW);
+		// Create hidden window
+		MakeWindow();
 
 		// Run the message loop.
 		while (!quit)
@@ -230,8 +240,6 @@ DWORD WINAPI Universal2DPanel(LPVOID lpParam)
 			}
 			else if (msg.message = WM_QUIT) quit = true;
 
-			SimConnect_CallDispatch(hSimConnect, MyDispatchProc, NULL);
-			Sleep(1);
 		}
 
 		// Remove menu item
@@ -253,23 +261,11 @@ DWORD WINAPI Universal2DPanel(LPVOID lpParam)
 HANDLE hMyThread;
 DWORD dwThreadId;
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+extern "C" __declspec(dllexport) void __stdcall DLLStart( void )
 {
-	// Check for argument that indicate start from P3D
-	int argc;
-	LPWSTR *argv;
-	argv = CommandLineToArgvW(pCmdLine, &argc);
-	if (argv != NULL && argc > 0)
-	{
-		if (lstrcmpW(argv[0], L"internal") == 0)
-		{
-			internal = true;
-			MessageBoxW(NULL, L"Applicatoin was started by Prepar3D.\nIn case of debugging you can attach Visual Studio debugger to the process Universal2DPanel.exe using Debug->Attach to process", L"Universal2DPanel", MB_ICONINFORMATION | MB_OK | MB_APPLMODAL);
-		}
-	}
-	LocalFree(argv);
+	internal = true;
 
-		
+	// Create thread for window and SimConnect messages processing outside of caller thread
 	hMyThread = CreateThread(
 		NULL,
 		0,
@@ -281,10 +277,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 	if (hMyThread == NULL)
 	{
-		return -1;
+		return;
 	}
 
-	WaitForSingleObject(hMyThread, INFINITE);
+	return; 
+}
 
-	return 0;
+extern "C" __declspec(dllexport) void __stdcall DLLStop( void )
+{
+	quit = true;
+	if (hMyThread != NULL)
+	{
+		WaitForSingleObject(hMyThread, INFINITE);
+	}
 }

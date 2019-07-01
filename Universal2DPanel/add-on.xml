@@ -4,8 +4,7 @@
   <AddOn.Name>Universal2DPanel</AddOn.Name>
   <AddOn.Description>Example of window application that interact with P3D using SimConnect. Access it using Add-ons menu.</AddOn.Description>
   <AddOn.Component>
-    <Category>EXE</Category>
-    <Path>Universal2DPanel.exe</Path>
-    <CommandLine>internal</CommandLine>
+    <Category>DLL</Category>
+    <Path>Universal2DPanel.dll</Path>
   </AddOn.Component>
 </SimBase.Document>
